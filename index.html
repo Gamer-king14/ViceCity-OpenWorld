@@ -29,11 +29,11 @@ const mat=(c,r=.8)=>new THREE.MeshStandardMaterial({color:c,roughness:r});
 const asphalt=mat(0x333941),grass=mat(0x467c49),line=mat(0xe9e4d7),glass=mat(0x69a8c8,.25),sidewalk=mat(0x9b9b91);
 function box(w,h,d,m,x,y,z){let o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);return o}
 box(400,.2,400,grass,0,-.15,0);
-for(let z=-160;z<=160;z+=80){box(400,.12,18,asphalt,0,.02,z);for(let x=-190;x<190;x+=18)box(6,.025,.25,line,x,.1,z)}
+for(let z=-160;z<=160;z+=80){box(400,.12,18,asphalt,0,.02,z);for(let x=-190;x<190;x+=28)box(9,.025,.22,line,x,.1,z)}
 for(let x=-160;x<=160;x+=80)box(18,.12,400,asphalt,x,.02,0);
-for(let x=-140;x<=140;x+=40)for(let z=-140;z<=140;z+=40){if(Math.random()<.14)continue;let w=18+Math.random()*10,d=18+Math.random()*10,h=8+Math.random()*46,c=[0xd6c4a5,0xc4d1d9,0xf0d4be,0x9db5c6,0xe5bca0][Math.floor(Math.random()*5)];box(w,h,d,mat(c),x,h/2,z);if(h>20)for(let y=6;y<h-2;y+=5)box(w*.72,.45,.12,glass,x,y,z+d/2+.07);box(w+2,.25,d+2,sidewalk,x,.2,z)}
+for(let x=-140;x<=140;x+=40)for(let z=-140;z<=140;z+=40){if(Math.random()<.14)continue;let w=18+Math.random()*10,d=18+Math.random()*10,h=8+Math.random()*46,c=[0xd6c4a5,0xc4d1d9,0xf0d4be,0x9db5c6,0xe5bca0][Math.floor(Math.random()*5)];box(w,h,d,mat(c),x,h/2,z);if(h>12){for(let y=4;y<h-2;y+=4){for(let wx=-w*.34;wx<=w*.34;wx+=w*.34)box(w*.22,1.1,.12,glass,x+wx,y,z+d/2+.07);for(let wx=-w*.34;wx<=w*.34;wx+=w*.34)box(.12,1.1,d*.65,glass,x+w/2+.07,y,z+wx)}}box(w+2,.25,d+2,sidewalk,x,.2,z)}
 box(36,.3,36,mat(0xb2a58a),0,.05,0);
-for(let i=0;i<18;i++){let x=-110+Math.random()*220,z=-110+Math.random()*220;if(Math.abs(x%80)>26&&Math.abs(z%80)>26)continue;box(1,5,1,mat(0x6c4529),x,2.5,z);let t=new THREE.Mesh(new THREE.ConeGeometry(3.5,8,7),mat(0x2b7747));t.position.set(x,8,z);scene.add(t)}
+for(let i=0;i<18;i++){let x=-110+Math.random()*220,z=-110+Math.random()*220;if(Math.abs(x%80)>26&&Math.abs(z%80)>26)continue;box(.35,6,.35,mat(0x8a5931),x,3,z);let crown=new THREE.Mesh(new THREE.SphereGeometry(2.2,10,8),mat(0x27864f));crown.position.set(x,7,z);scene.add(crown);for(let a=0;a<5;a++){let fr=new THREE.Mesh(new THREE.ConeGeometry(1.1,5,8),mat(0x338f58));fr.position.set(x+Math.cos(a*1.25)*1.4,7.2,z+Math.sin(a*1.25)*1.4);fr.rotation.z=Math.cos(a*1.25)*.25;scene.add(fr)}}
 // simple enterable shop
 const doorPos=new THREE.Vector3(18,0,28);box(10,7,10,mat(0xb6b4ae),18,3.5,28);box(4,3.4,.25,glass,18,2.2,22.85);box(1.5,3.4,.3,mat(0x9a6540),15.4,2.2,22.85);box(1.5,3.4,.3,mat(0x9a6540),20.6,2.2,22.85);
 const interior=new THREE.Group();scene.add(interior);interior.visible=false;function room(w,h,d,m,x,y,z){let o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);interior.add(o)}
