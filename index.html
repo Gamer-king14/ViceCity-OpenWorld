@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Vice City — Open World Prototype</title>
+<style>
+*{box-sizing:border-box}body{margin:0;overflow:hidden;background:#0c1424;color:#fff;font-family:Arial,sans-serif}canvas{display:block}
+#intro{position:fixed;inset:0;pointer-events:none;background:linear-gradient(180deg,#081325cc,#08132500 40%,#081325cc)}
+#brand{position:absolute;top:5vh;left:5vw;font-weight:900;font-size:clamp(28px,6vw,64px);letter-spacing:.12em;color:#ff8a67;text-shadow:0 0 20px #ff4d9a}
+#sub{font-size:12px;letter-spacing:.25em;color:#b5eaff;margin-top:8px}
+#hud{position:fixed;left:14px;bottom:14px;background:#07111dbb;border:1px solid #ffffff22;border-radius:14px;padding:12px;max-width:calc(100vw - 28px);font-size:13px}
+#tip{position:fixed;top:15px;right:15px;background:#07111dbb;padding:10px 12px;border-radius:12px;font-size:12px;line-height:1.6}
+#toast{position:fixed;top:45%;left:50%;transform:translate(-50%,-50%);font-size:18px;font-weight:bold;text-shadow:0 2px 10px #000;display:none}
+#touch{position:fixed;bottom:22px;right:16px;display:flex;gap:10px}
+.touchbtn{width:66px;height:66px;border-radius:50%;border:1px solid #ffffff55;background:#112b46cc;color:white;font-weight:bold;touch-action:none}
+#drive{display:none}
+@media(min-width:800px){#touch{opacity:.45}}
+</style>
+</head>
+<body>
+<div id="intro"><div id="brand">VICE CITY<small id="sub">OPEN WORLD • PROTOTYPE 01</small></div></div>
+<div id="tip">WASD / Pfeile · bewegen<br>Shift · sprinten · E · Auto ein/aus<br>Maus bewegen · Kamera drehen</div>
+<div id="hud">Erkundung: <b>Downtown Bay</b> · Modus: <b id="mode">zu Fuß</b><br>Hinweis: <span id="hint">Finde ein Auto in der Nähe und drücke E.</span></div>
+<div id="toast"></div>
+<div id="touch"><button class="touchbtn" id="jump">↑</button><button class="touchbtn" id="interact">E</button></div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x87bde1);scene.fog=new THREE.Fog(0x87bde1,100,360);
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,500);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;document.body.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xe5f5ff,0x43522a,2));
+const sun=new THREE.DirectionalLight(0xfff1d5,2.2);sun.position.set(-50,90,40);sun.castShadow=true;scene.add(sun);
+function mat(color,rough=.85){return new THREE.MeshStandardMaterial({color,roughness:rough})}
+const asphalt=mat(0x333941), sidewalk=mat(0x9b9b91), grass=mat(0x467c49), white=mat(0xe9e4d7), glass=mat(0x69a8c8,.25);
+function box(w,h,d,m,x,y,z){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);return o}
+box(400,.2,400,grass,0,-.15,0);
+// road grid
+for(let z=-160;z<=160;z+=80){box(400,.12,18,asphalt,0,.02,z);for(let x=-190;x<190;x+=18)box(6,.025,.25,white,x,.1,z)}
+for(let x=-160;x<=160;x+=80)box(18,.12,400,asphalt,x,.02,0);
+// sidewalks, blocks, simple city buildings
+for(let x=-140;x<=140;x+=40)for(let z=-140;z<=140;z+=40){
+ if(Math.random()<.14)continue;
+ const w=18+Math.random()*10,d=18+Math.random()*10,h=8+Math.random()*46;
+ const color=[0xd6c4a5,0xc4d1d9,0xf0d4be,0x9db5c6,0xe5bca0][Math.floor(Math.random()*5)];
+ box(w,h,d,mat(color),x, h/2,z);
+ // window strip accents
+ if(h>20){for(let yy=6;yy<h-2;yy+=5)box(w*.72,.45,.12,glass,x,yy,z+d/2+.07)}
+ box(w+2,.25,d+2,sidewalk,x,.2,z);
+}
+// park plaza
+box(36,.3,36,mat(0xb2a58a),0,.05,0);
+for(let i=0;i<18;i++){let x=-110+Math.random()*220,z=-110+Math.random()*220;if(Math.abs(x%80)>26&&Math.abs(z%80)>26)continue;
+box(1,5,1,mat(0x6c4529),x,2.5,z);let crown=new THREE.Mesh(new THREE.ConeGeometry(3.5,8,7),mat(0x2b7747));crown.position.set(x,8,z);crown.castShadow=true;scene.add(crown)}
+// player
+const player=new THREE.Group();const body=new THREE.Mesh(new THREE.CapsuleGeometry(.55,1.2,4,8),mat(0x235b9a));body.position.y=1;body.castShadow=true;player.add(body);scene.add(player);player.position.set(0,0,12);
+let yaw=0,camYaw=0,camPitch=.24,carMode=false,velocity=0;const keys={};let car;
+function makeCar(x,z,color){const g=new THREE.Group();const shell=new THREE.Mesh(new THREE.BoxGeometry(4.1,1.15,2),mat(color,.45));shell.position.y=.8;shell.castShadow=true;g.add(shell);const cabin=new THREE.Mesh(new THREE.BoxGeometry(2.1,.9,1.65),glass);cabin.position.set(-.25,1.55,0);g.add(cabin);for(const xx of [-1.35,1.35])for(const zz of [-1,1]){let wheel=new THREE.Mesh(new THREE.CylinderGeometry(.48,.48,.32,16),mat(0x171717));wheel.rotation.z=Math.PI/2;wheel.position.set(xx,.45,zz*.92);g.add(wheel)}g.position.set(x,0,z);scene.add(g);return g}
+car=makeCar(8,12,0xe54e63);const cars=[car,makeCar(-25,-10,0x26a5c2),makeCar(60,55,0xf1c64b)];
+let activeCar=car;function message(s){const t=document.getElementById('toast');t.textContent=s;t.style.display='block';setTimeout(()=>t.style.display='none',1800)}
+function interact(){if(!carMode){let nearest=null,dist=999;for(const c of cars){let d=player.position.distanceTo(c.position);if(d<dist){dist=d;nearest=c}}if(dist<7){activeCar=nearest;carMode=true;player.visible=false;document.getElementById('mode').textContent='im Auto';document.getElementById('hint').textContent='WASD fahren · E aussteigen';message('Du bist eingestiegen!')}else message('Kein Auto in der Nähe')}else{carMode=false;player.visible=true;player.position.copy(activeCar.position);player.position.x+=3;document.getElementById('mode').textContent='zu Fuß';document.getElementById('hint').textContent='Finde ein Auto in der Nähe und drücke E.';message('Ausgestiegen')}}
+window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key.toLowerCase()==='e')interact()});window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+let dragging=false,lastX=0,lastY=0;renderer.domElement.addEventListener('pointerdown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});renderer.domElement.addEventListener('pointerup',()=>dragging=false);renderer.domElement.addEventListener('pointermove',e=>{if(dragging){camYaw-= (e.clientX-lastX)*.005;camPitch=Math.max(-.2,Math.min(1.05,camPitch+(e.clientY-lastY)*.003));lastX=e.clientX;lastY=e.clientY}});
+document.getElementById('interact').onclick=interact;document.getElementById('jump').onclick=()=>{if(!carMode)player.position.y=.25;setTimeout(()=>player.position.y=0,180)};
+let last=performance.now();function animate(now){requestAnimationFrame(animate);let dt=Math.min((now-last)/1000,.05);last=now;const f=keys.w||keys.arrowup?1:keys.s||keys.arrowdown?-1:0;const turn=keys.a||keys.arrowleft?-1:keys.d||keys.arrowright?1:0;
+if(carMode){velocity+=(f*22-velocity*2.3)*dt;activeCar.rotation.y+=turn*dt*Math.min(2.4,Math.abs(velocity)*.08);activeCar.position.x+=Math.sin(activeCar.rotation.y)*velocity*dt;activeCar.position.z+=Math.cos(activeCar.rotation.y)*velocity*dt;camera.position.set(activeCar.position.x-Math.sin(activeCar.rotation.y+camYaw)*10,activeCar.position.y+5+camPitch*4,activeCar.position.z-Math.cos(activeCar.rotation.y+camYaw)*10);camera.lookAt(activeCar.position.x,activeCar.position.y+1,activeCar.position.z)}
+else{let dir=new THREE.Vector3(Math.sin(camYaw),0,Math.cos(camYaw));let side=new THREE.Vector3(Math.cos(camYaw),0,-Math.sin(camYaw));player.position.addScaledVector(dir,-f*dt*(keys.shift?10:5));player.position.addScaledVector(side,turn*dt*4);player.rotation.y=camYaw+Math.PI;camera.position.set(player.position.x+Math.sin(camYaw+Math.PI)*8,player.position.y+4+camPitch*5,player.position.z+Math.cos(camYaw+Math.PI)*8);camera.lookAt(player.position.x,player.position.y+1,player.position.z)}
+renderer.render(scene,camera)}requestAnimationFrame(animate);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script></body></html>
