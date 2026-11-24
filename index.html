@@ -14,6 +14,9 @@
 #touch{position:fixed;bottom:22px;right:16px;display:flex;gap:10px}
 .touchbtn{width:66px;height:66px;border-radius:50%;border:1px solid #ffffff55;background:#112b46cc;color:white;font-weight:bold;touch-action:none}
 #drive{display:none}
+#stickBase{position:fixed;left:22px;bottom:26px;width:142px;height:142px;border-radius:50%;background:radial-gradient(circle,#31566c88,#10283aaa);border:2px solid #ffffff45;box-shadow:0 8px 28px #0005;touch-action:none;z-index:5}
+#stickKnob{position:absolute;width:62px;height:62px;left:40px;top:40px;border-radius:50%;background:linear-gradient(145deg,#d8f3ffcc,#6b9dbacc);border:2px solid #ffffff9a;box-shadow:0 3px 12px #0005;pointer-events:none}
+@media(min-width:800px){#stickBase,#touch{opacity:.35}}
 @media(min-width:800px){#touch{opacity:.45}}
 </style>
 </head>
@@ -23,14 +26,14 @@
 <div id="tip">WASD / Pfeile · bewegen<br>Shift · sprinten · E · Auto ein/aus<br>Maus bewegen · Kamera drehen</div>
 <div id="hud">Erkundung: <b>Downtown Bay</b> · Modus: <b id="mode">zu Fuß</b><br>Hinweis: <span id="hint">Finde ein Auto in der Nähe und drücke E.</span></div>
 <div id="toast"></div>
-<div id="touch"><button class="touchbtn" id="jump">↑</button><button class="touchbtn" id="interact">E</button></div>
+<div id="stickBase" aria-label="Joystick"><div id="stickKnob"></div></div><div id="touch"><button class="touchbtn" id="jump">↑</button><button class="touchbtn" id="interact">E</button></div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js"}}</script>
 <script type="module">
 const loader=document.getElementById("loading");
 import("three").then((THREE)=>{
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x87bde1);scene.fog=new THREE.Fog(0x87bde1,100,360);
 const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,500);
-const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;document.body.appendChild(renderer.domElement);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;document.body.appendChild(renderer.domElement);
 scene.add(new THREE.HemisphereLight(0xe5f5ff,0x43522a,2));
 const sun=new THREE.DirectionalLight(0xfff1d5,2.2);sun.position.set(-50,90,40);sun.castShadow=true;scene.add(sun);
 function mat(color,rough=.85){return new THREE.MeshStandardMaterial({color,roughness:rough})}
@@ -62,9 +65,15 @@ car=makeCar(8,12,0xe54e63);const cars=[car,makeCar(-25,-10,0x26a5c2),makeCar(60,
 let activeCar=car;function message(s){const t=document.getElementById('toast');t.textContent=s;t.style.display='block';setTimeout(()=>t.style.display='none',1800)}
 function interact(){if(!carMode){let nearest=null,dist=999;for(const c of cars){let d=player.position.distanceTo(c.position);if(d<dist){dist=d;nearest=c}}if(dist<7){activeCar=nearest;carMode=true;player.visible=false;document.getElementById('mode').textContent='im Auto';document.getElementById('hint').textContent='WASD fahren · E aussteigen';message('Du bist eingestiegen!')}else message('Kein Auto in der Nähe')}else{carMode=false;player.visible=true;player.position.copy(activeCar.position);player.position.x+=3;document.getElementById('mode').textContent='zu Fuß';document.getElementById('hint').textContent='Finde ein Auto in der Nähe und drücke E.';message('Ausgestiegen')}}
 window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key.toLowerCase()==='e')interact()});window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+let stickX=0,stickY=0;const stickBase=document.getElementById("stickBase"),stickKnob=document.getElementById("stickKnob");let stickPointer=null;
+function updateStick(e){const r=stickBase.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy;const max=45,len=Math.hypot(dx,dy);if(len>max){dx*=max/len;dy*=max/len}stickX=dx/max;stickY=dy/max;stickKnob.style.transform="translate("+dx+"px,"+dy+"px)";}
+stickBase.addEventListener("pointerdown",e=>{stickPointer=e.pointerId;stickBase.setPointerCapture(e.pointerId);updateStick(e);});
+stickBase.addEventListener("pointermove",e=>{if(e.pointerId===stickPointer)updateStick(e)});
+function releaseStick(e){if(e.pointerId!==stickPointer)return;stickPointer=null;stickX=stickY=0;stickKnob.style.transform="translate(0px,0px)";}
+stickBase.addEventListener("pointerup",releaseStick);stickBase.addEventListener("pointercancel",releaseStick);
 let dragging=false,lastX=0,lastY=0;renderer.domElement.addEventListener('pointerdown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});renderer.domElement.addEventListener('pointerup',()=>dragging=false);renderer.domElement.addEventListener('pointermove',e=>{if(dragging){camYaw-= (e.clientX-lastX)*.005;camPitch=Math.max(-.2,Math.min(1.05,camPitch+(e.clientY-lastY)*.003));lastX=e.clientX;lastY=e.clientY}});
 document.getElementById('interact').onclick=interact;document.getElementById('jump').onclick=()=>{if(!carMode)player.position.y=.25;setTimeout(()=>player.position.y=0,180)};
-let last=performance.now();function animate(now){requestAnimationFrame(animate);let dt=Math.min((now-last)/1000,.05);last=now;const f=keys.w||keys.arrowup?1:keys.s||keys.arrowdown?-1:0;const turn=keys.a||keys.arrowleft?-1:keys.d||keys.arrowright?1:0;
+let last=performance.now();function animate(now){requestAnimationFrame(animate);let dt=Math.min((now-last)/1000,.05);last=now;const f=keys.w||keys.arrowup?1:keys.s||keys.arrowdown?-1:-stickY;const turn=keys.a||keys.arrowleft?-1:keys.d||keys.arrowright?1:stickX;
 if(carMode){velocity+=(f*22-velocity*2.3)*dt;activeCar.rotation.y+=turn*dt*Math.min(2.4,Math.abs(velocity)*.08);activeCar.position.x+=Math.sin(activeCar.rotation.y)*velocity*dt;activeCar.position.z+=Math.cos(activeCar.rotation.y)*velocity*dt;camera.position.set(activeCar.position.x-Math.sin(activeCar.rotation.y+camYaw)*10,activeCar.position.y+5+camPitch*4,activeCar.position.z-Math.cos(activeCar.rotation.y+camYaw)*10);camera.lookAt(activeCar.position.x,activeCar.position.y+1,activeCar.position.z)}
 else{let dir=new THREE.Vector3(Math.sin(camYaw),0,Math.cos(camYaw));let side=new THREE.Vector3(Math.cos(camYaw),0,-Math.sin(camYaw));player.position.addScaledVector(dir,-f*dt*(keys.shift?10:5));player.position.addScaledVector(side,turn*dt*4);player.rotation.y=camYaw+Math.PI;camera.position.set(player.position.x+Math.sin(camYaw+Math.PI)*8,player.position.y+4+camPitch*5,player.position.z+Math.cos(camYaw+Math.PI)*8);camera.lookAt(player.position.x,player.position.y+1,player.position.z)}
 renderer.render(scene,camera);if(loader)loader.style.display="none"}requestAnimationFrame(animate);
