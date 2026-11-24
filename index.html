@@ -19,13 +19,15 @@
 </head>
 <body>
 <div id="intro"><div id="brand">VICE CITY<small id="sub">OPEN WORLD • PROTOTYPE 01</small></div></div>
+<div id="loading" style="position:fixed;inset:0;display:grid;place-items:center;background:#07111d;color:white;font:700 20px Arial;z-index:20">VICE CITY wird geladen…</div>
 <div id="tip">WASD / Pfeile · bewegen<br>Shift · sprinten · E · Auto ein/aus<br>Maus bewegen · Kamera drehen</div>
 <div id="hud">Erkundung: <b>Downtown Bay</b> · Modus: <b id="mode">zu Fuß</b><br>Hinweis: <span id="hint">Finde ein Auto in der Nähe und drücke E.</span></div>
 <div id="toast"></div>
 <div id="touch"><button class="touchbtn" id="jump">↑</button><button class="touchbtn" id="interact">E</button></div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js"}}</script>
 <script type="module">
-import * as THREE from 'three';
+const loader=document.getElementById("loading");
+import("three").then((THREE)=>{
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x87bde1);scene.fog=new THREE.Fog(0x87bde1,100,360);
 const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,500);
 const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;document.body.appendChild(renderer.domElement);
@@ -65,6 +67,7 @@ document.getElementById('interact').onclick=interact;document.getElementById('ju
 let last=performance.now();function animate(now){requestAnimationFrame(animate);let dt=Math.min((now-last)/1000,.05);last=now;const f=keys.w||keys.arrowup?1:keys.s||keys.arrowdown?-1:0;const turn=keys.a||keys.arrowleft?-1:keys.d||keys.arrowright?1:0;
 if(carMode){velocity+=(f*22-velocity*2.3)*dt;activeCar.rotation.y+=turn*dt*Math.min(2.4,Math.abs(velocity)*.08);activeCar.position.x+=Math.sin(activeCar.rotation.y)*velocity*dt;activeCar.position.z+=Math.cos(activeCar.rotation.y)*velocity*dt;camera.position.set(activeCar.position.x-Math.sin(activeCar.rotation.y+camYaw)*10,activeCar.position.y+5+camPitch*4,activeCar.position.z-Math.cos(activeCar.rotation.y+camYaw)*10);camera.lookAt(activeCar.position.x,activeCar.position.y+1,activeCar.position.z)}
 else{let dir=new THREE.Vector3(Math.sin(camYaw),0,Math.cos(camYaw));let side=new THREE.Vector3(Math.cos(camYaw),0,-Math.sin(camYaw));player.position.addScaledVector(dir,-f*dt*(keys.shift?10:5));player.position.addScaledVector(side,turn*dt*4);player.rotation.y=camYaw+Math.PI;camera.position.set(player.position.x+Math.sin(camYaw+Math.PI)*8,player.position.y+4+camPitch*5,player.position.z+Math.cos(camYaw+Math.PI)*8);camera.lookAt(player.position.x,player.position.y+1,player.position.z)}
-renderer.render(scene,camera)}requestAnimationFrame(animate);
+renderer.render(scene,camera);if(loader)loader.style.display="none"}requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+}).catch((err)=>{if(loader){loader.innerHTML="3D konnte nicht geladen werden.<br><small>Bitte Internetverbindung prüfen und die Seite neu laden.</small>";loader.style.background="#07111d";}console.error(err);});
 </script></body></html>
