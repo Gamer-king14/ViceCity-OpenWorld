@@ -45,20 +45,18 @@ let inside=false;
 const player=new THREE.Group();scene.add(player);
 const skin=mat(0xc58d68,.78),shirt=mat(0x285b88,.86),pants=mat(0x263545,.9),shoes=mat(0x171d25,.75),hair=mat(0x30241d,.95),eye=mat(0x211a16,.5);
 function part(geo,m,x,y,z,parent=player){let mesh=new THREE.Mesh(geo,m);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh}
-function capsule(parent,r,len,m,x,y,z){return part(new THREE.CapsuleGeometry(r,len,5,10),m,x,y,z,parent)}
-// Anatomical silhouette: rounded torso, neck, head, layered arms and legs.
-capsule(player,.34,.55,shirt,0,1.48,0);
-part(new THREE.SphereGeometry(.34,16,12),shirt,0,1.22,0);
-capsule(player,.105,.18,skin,0,1.91,0);
-part(new THREE.SphereGeometry(.255,20,16),skin,0,2.18,0);
-part(new THREE.SphereGeometry(.26,16,12,0,Math.PI*2,0,Math.PI*.56),hair,0,2.27,.015);
-part(new THREE.SphereGeometry(.065,12,8),skin,-.26,2.17,0);part(new THREE.SphereGeometry(.065,12,8),skin,.26,2.17,0);
-for(let x of [-.085,.085])part(new THREE.SphereGeometry(.025,8,8),eye,x,2.19,-.238);
-part(new THREE.SphereGeometry(.035,8,8),skin,0,2.12,-.26);
-const armL=new THREE.Group(),armR=new THREE.Group();armL.position.set(-.39,1.73,0);armR.position.set(.39,1.73,0);player.add(armL,armR);
-for(let [g,s] of [[armL,-1],[armR,1]]){capsule(g,.115,.32,shirt,0,-.22,0);capsule(g,.09,.31,skin,0,-.59,-.005);part(new THREE.SphereGeometry(.095,10,8),skin,0,-.79,-.005,g);g.rotation.z=s*.08}
-const legL=new THREE.Group(),legR=new THREE.Group();legL.position.set(-.17,1.02,0);legR.position.set(.17,1.02,0);player.add(legL,legR);
-for(let g of [legL,legR]){capsule(g,.135,.38,pants,0,-.25,0);capsule(g,.105,.34,pants,0,-.65,-.015);part(new THREE.SphereGeometry(.12,12,8),shoes,0,-.91,-.075,g);part(new THREE.BoxGeometry(.22,.12,.34),shoes,0,-.93,-.13,g)}
+function capsule(parent,r,len,m,x,y,z){return part(new THREE.CapsuleGeometry(r,len,6,12),m,x,y,z,parent)}
+// Unified, properly overlapping humanoid with feet aligned to the ground.
+capsule(player,.32,.48,shirt,0,1.48,0); // torso
+capsule(player,.095,.16,skin,0,1.88,0); // neck
+part(new THREE.SphereGeometry(.245,20,16),skin,0,2.13,0); // head
+const hairCap=part(new THREE.SphereGeometry(.25,18,12),hair,0,2.22,.015);hairCap.scale.set(1, .48, 1);
+part(new THREE.SphereGeometry(.055,10,8),skin,-.24,2.13,0);part(new THREE.SphereGeometry(.055,10,8),skin,.24,2.13,0);
+for(let x of [-.078,.078])part(new THREE.SphereGeometry(.022,8,8),eye,x,2.145,-.225);
+const armL=new THREE.Group(),armR=new THREE.Group();armL.position.set(-.37,1.72,0);armR.position.set(.37,1.72,0);player.add(armL,armR);
+for(let g of [armL,armR]){capsule(g,.105,.32,shirt,0,-.2,0);capsule(g,.085,.3,skin,0,-.52,0);part(new THREE.SphereGeometry(.085,10,8),skin,0,-.72,0,g)}
+const legL=new THREE.Group(),legR=new THREE.Group();legL.position.set(-.15,1.08,0);legR.position.set(.15,1.08,0);player.add(legL,legR);
+for(let g of [legL,legR]){capsule(g,.12,.34,pants,0,-.24,0);capsule(g,.095,.28,pants,0,-.58,-.01);part(new THREE.BoxGeometry(.21,.13,.32),shoes,0,-.9,-.09,g)}
 player.position.set(0,0,12);
 let camYaw=0,camPitch=.24,carMode=false,velocity=0,jumpVelocity=0,onGround=true;const keys={};let cars=[];
 function makeCar(x,z,color){let g=new THREE.Group(),paint=mat(color,.42),chrome=mat(0xb8c4ca,.3),dark=mat(0x18232c,.5),lamp=mat(0xfff1c4,.3),tail=mat(0xff3344,.35);function add(geo,m,pos){let o=new THREE.Mesh(geo,m);o.position.set(...pos);o.castShadow=true;g.add(o);return o}
